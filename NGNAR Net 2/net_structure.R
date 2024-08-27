@@ -5,3 +5,6 @@ load("Xiangfei.net_2002.RData")
 write.matrix(FMD.MVTS, "FMD.csv")
 write(toJSON(Xiangfei.net_2002[1][[1]]),file="Edges.json")
 write(toJSON(Xiangfei.net_2002[2][[1]]),file="Dists.json")
+
+write(toJSON(net_1967[1][[1]]),file="/Users/lvxiangfei/Desktop/Edges_1967.json")
+write(toJSON(net_1967[2][[1]]),file="/Users/lvxiangfei/Desktop/Dists_1967.json")
