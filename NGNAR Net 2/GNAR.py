@@ -1,5 +1,3 @@
-import numpy as np
-
 class NetworkModel:
     def __init__(self, alpha_order, beta_order, intercept=True, global_intercept=False):
         self.beta_order = beta_order
@@ -11,7 +9,7 @@ class NetworkModel:
         else:
             self.alpha_order = len(alpha_order)
             self.alpha_orders = alpha_order # alpha_orders is [1,0,0,1,...]; alpha order is max time lag
-        
+
     """
     def transformVTS(self, vts):
         # shape of X: n*p, col_1:x_t-1; col_2:2+beta_order_1: weighted t-1 stage-r neighbours, ...
@@ -36,6 +34,27 @@ class NetworkModel:
                 X = np.hstack((X,np.repeat(np.identity(self.network.size), len(vts)-self.alpha_order, axis=0)))
         return X
         """
+    """
+    def transformVTS(self, vts):
+        X = []
+        for t in range(self.alpha_order):
+            time_lagged = vts[self.alpha_order - t - 1:-t - 1, :]  # Time lagged vts
+            weight_mats = self.network.w_mats[1 - self.alpha_orders[t]:1 + self.beta_order[t]]
+            transformed = np.einsum('ij,jkl->ikl', time_lagged, weight_mats)  # Apply weights
+            reshaped = transformed.transpose((1, 2, 0)).reshape((-1, self.alpha_orders[t] + self.beta_order[t]), order="F")
+            X.append(reshaped)
+
+        X = np.hstack(X)
+        if self.intercept:
+            if self.global_intercept:
+                intercept_column = np.ones((X.shape[0], 1))
+                X = np.hstack((X, intercept_column))
+            else:
+                identity_matrix = np.repeat(np.identity(self.network.size), len(vts) - self.alpha_order, axis=0)
+                X = np.hstack((X, identity_matrix))
+        return X
+        """
+
 
     def transformVTS(self,vts):
         X = []
@@ -49,7 +68,8 @@ class NetworkModel:
             else:
                 X = np.hstack((X,np.repeat(np.identity(self.network.size), len(vts)-self.alpha_order, axis=0)))
         return X
-    
+
+
     def return_coef(self, t, type="all"):
         if type=="alpha":
             if self.coef_index[2*t-2] != 0 and self.coef_index[2*t-2] != self.coef_index[2*t-3]:
@@ -73,7 +93,7 @@ class NetworkModel:
         G = np.zeros(((T-self.alpha_order)*n,self.k*X.shape[1]))
         for i in range(self.k-1):
             for j in range(i+1):
-                G[i*size*n:(i+1)*size*n,j*X.shape[1]:(j+1)*X.shape[1]] = X[i*size*n:(i+1)*size*n,:] 
+                G[i*size*n:(i+1)*size*n,j*X.shape[1]:(j+1)*X.shape[1]] = X[i*size*n:(i+1)*size*n,:]
         for j in range(self.k):
             G[(self.k-1)*size*n:,j*X.shape[1]:(j+1)*X.shape[1]] = X[(self.k-1)*size*n:,:]
         return G
@@ -101,14 +121,14 @@ def min_part(xs, r):
         ys.append(x)
     part.append(ys)
     return part
-            
+
 
 class GNAR(NetworkModel):
     def __init__(self, alpha_order, beta_order, intercept=True, global_intercept=False):
         super().__init__(alpha_order, beta_order,intercept,global_intercept)
         self.coef_index = np.cumsum([[self.alpha_orders[i]]+[beta_order[i]] for i in range(self.alpha_order)])
         self.coef_order = self.coef_index[-1]
-        
+
     def simulate(self, network, initial_vts, length, coefs, error_cov_mat):
         self.network = network
         l = len(initial_vts)
@@ -118,16 +138,16 @@ class GNAR(NetworkModel):
             vts_sim[l+i,:] = self.transformVTS(vts_sim[l+i-self.alpha_order:l+i+1,:])@coefs + multivariate_normal(
                 cov=error_cov_mat).rvs(1)
         return vts_sim[len(initial_vts):]
-    
+
     def loglik(self):
         return np.sum(norm.logpdf(self.y,loc=self.X@self.coefs,scale=self.sigma2**.5))
-    
+
     def r2(self):
         return r2_score(self.y, self.X@self.coefs)
 
     def adj_r2(self):
         return 1-((1-self.r2())*(len(self.y)-1)/(len(self.y)-len(self.coefs)-1))
-        
+
     def fit(self, network, vts):
         # the order of cols of vts must match the order of network nodes
         # i.e. the first vts col is the ts for the first node in the network, etc
@@ -139,7 +159,7 @@ class GNAR(NetworkModel):
         self.coefs,self.res = np.linalg.lstsq(self.X, self.y, rcond=None)[:2]
         self.vts_fitted = np.reshape((self.X@self.coefs),(-1,network.size),"F")
         #self.sigma2 = np.sum((self.y-self.X@self.coefs)**2)/(len(self.y)-len(self.coefs)) #assuming equal error var
-        
+
     def compute_cov(self,X,y,coefs):
         T = int(len(y)/self.network.size)
         residual = np.reshape((y-X@coefs),(-1,self.network.size),"F")
@@ -156,7 +176,7 @@ class GNAR(NetworkModel):
         coef_cov_mat = inv_X_cov_mat@var_X_res@inv_X_cov_mat/T
         inv_coef_cov_mat = X_cov_mat@np.linalg.solve(var_X_res,X_cov_mat)*T
         return coef_cov_mat,inv_coef_cov_mat
-        
+
     def predict(self, length, nodes=None, vts_end =None):
         if vts_end is None:
             vts_end = self.vts_end
@@ -170,7 +190,7 @@ class GNAR(NetworkModel):
             return vts_pred[self.alpha_order:,nodes]
 
 
-    
+
     def return_coef(self, t, type="all"):
         if type=="alpha":
             if self.coef_index[2*t-2] != 0 and self.coef_index[2*t-2] != self.coef_index[2*t-3]:
@@ -181,7 +201,7 @@ class GNAR(NetworkModel):
             return self.coefs[self.coef_index[2*t-2]:self.coef_index[2*t-1]]
         elif type == "all":
             return self.coefs[self.coef_index[2*t-2]-1:self.coef_index[2*t-1]]
-        
+
     def initial_fit(self,network,vts,size,level=0.05):
         self.network = network
         self.vts = vts
@@ -206,10 +226,10 @@ class GNAR(NetworkModel):
                 coefs_prev = coefs_new
                 self.cpts_candidate.append(l*size)
         #print(self.cpts_candidate)
-            
+
     def minimize(self,X,y):
         return lsq_linear(X,y).cost
-            
+
     def LIC(self,cpts_subset,window,omega):
         #local information criterion
         rss = 0
@@ -232,7 +252,7 @@ class GNAR(NetworkModel):
         else:
             lic = n*np.log(rss/n) + len(cpts_subset)*self.X.shape[1]*omega
         return lic
-            
+
     def local_screening(self,window,omega):
         lowest_lic = np.inf
         for cpts_subset in powerset(self.cpts_candidate):
@@ -241,8 +261,8 @@ class GNAR(NetworkModel):
                 cpts = cpts_subset
                 lowest_lic = lic
         self.cpts = cpts
-    
-    
+
+
     def exhaustive_search(self,window):
         partition = min_part(self.cpts,2*window)
         cpts = []
@@ -261,7 +281,7 @@ class GNAR(NetworkModel):
                     lowest_cost = cost
             cpts.append(best_t)
         self.cpts = np.array(cpts)+self.alpha_order
-        
+
     def cpts_detect(self,network,vts,size,window,omega):
         self.initial_fit(network,vts,size)
         if len(self.cpts_candidate) == 0:
@@ -271,7 +291,7 @@ class GNAR(NetworkModel):
             return []
         self.exhaustive_search(window)
         return self.cpts
-            
+
 
 def GNAR_sim_piecewise(networks, alpha_order, beta_order, coefs_list, intercept,global_intercept,error_cov_mat_list, length_list, burn_in = 100):
     num_piece = len(coefs_list)
@@ -304,18 +324,18 @@ class NGNAR_TF(NetworkModel):
         self.beta_order = beta_order
         self.intercept = intercept
         self.global_intercept = global_intercept
-        
+
         if isinstance(alpha_order,int):
             self.alpha_order = alpha_order
             self.alpha_orders = [1 for _ in range(alpha_order)]
         else:
             self.alpha_order = len(alpha_order)
             self.alpha_orders = alpha_order # alpha_orders is [1,0,0,1,...]; alpha order is max time lag
-        
+
         self.coef_index = np.cumsum([[self.alpha_orders[i]]+[beta_order[i]] for i in range(self.alpha_order)])
         self.coef_order = self.coef_index[-1]
-            
-        self.seasonal = seasonal #seasonal adjustment 
+
+        self.seasonal = seasonal #seasonal adjustment
         #self.inv =inv # controls whether the link function is applied to the vts when fitting
         if link == "softplus":
             self.link = lambda x:tf.math.softplus(x)
@@ -326,48 +346,86 @@ class NGNAR_TF(NetworkModel):
         elif link == "relu":
             self.link = tf.nn.relu
             self.link_np = relu
-    
+
     def get_fitted(self):
         y = self.link(tf.linalg.matmul(self.X,self.coefs))
         if self.seasonal:
             return y + self.season_seq(self.t)
         else:
             return y
-        
+
     def season_seq(self,t):
         # the last term is to keep the result non-neg
-        return self.coefs_season[0]*tf.sin(self.coefs_season[1]*t-self.coefs_season[2])+self.coefs_season[0] 
-    
+        return self.coefs_season[0]*tf.sin(self.coefs_season[1]*t-self.coefs_season[2])+self.coefs_season[0]
+
     def MSE(self):
         return tf.keras.losses.MeanSquaredError()(self.y, self.get_fitted())+self.coef_penalty()
-    
+
     def r2(self):
         return r2_score(self.y, self.get_fitted())
 
     def adj_r2(self):
         return 1-((1-self.r2())*(len(self.y)-1)/(len(self.y)-len(self.coefs)-1))
-    
+
     def loglik(self):
         return np.sum(poisson.logpmf(self.y,mu=self.y_fitted))
 
-    
+
     def neg_loglik(self):
         return -tf.math.reduce_sum(tfp.distributions.Poisson(rate=self.get_fitted()).log_prob(self.y))+self.coef_penalty()
-    
+
+    #def fit_MLE(self, network, vts):
+     #   """
+     #   fit the NGNAR model using IWLS,
+      #  only poisson distribution is implemented
+      #  """
+      #  glm = tfp.glm.CustomExponentialFamily(tfp.distributions.Poisson, tf.math.softplus)
+      #  self.network = network
+
+      #  self.vts_end = vts[-self.alpha_order:,:]
+      #  self.y = tf.convert_to_tensor(vts[self.alpha_order:,:].flatten("F"),dtype=np.float64)
+      #  self.X = tf.convert_to_tensor(self.transformVTS(vts),dtype=np.float64)
+      #  self.coefs = tf.Variable(np.linalg.lstsq(self.X, self.y,None)[0])
+      #  self.coefs = tfp.glm.fit(self.X,self.y,glm,self.coefs,fast_unsafe_numerics=False)[0].numpy()
+
     def fit_MLE(self, network, vts):
         """
-        fit the NGNAR model using IWLS, 
-        only poisson distribution is implemented 
+        fit the NGNAR model using IWLS,
+        only poisson distribution is implemented
         """
         glm = tfp.glm.CustomExponentialFamily(tfp.distributions.Poisson, tf.math.softplus)
         self.network = network
-        
+
         self.vts_end = vts[-self.alpha_order:,:]
         self.y = tf.convert_to_tensor(vts[self.alpha_order:,:].flatten("F"),dtype=np.float64)
+        # Transfer to GPU
+        #with tf.device('/GPU:0'):
+         #   self.y = tf.identity(self.y )
+
         self.X = tf.convert_to_tensor(self.transformVTS(vts),dtype=np.float64)
+        # Transfer to GPU
+        #with tf.device('/GPU:0'):
+         #   self.X = tf.identity(self.X)
+
+        # Try to transfer data to GPU and handle memory growth
+        try:
+            gpus = tf.config.experimental.list_physical_devices('GPU')
+            if gpus:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                with tf.device('/GPU:0'):
+                    self.y = tf.identity(self.y)
+                    self.X = tf.identity(self.X)
+        except RuntimeError as e:
+            print("Error setting memory growth or transferring to GPU:", e)
+
+        # Fit the model using least squares
+        self.coefs = tf.Variable(np.linalg.lstsq(self.X, self.y.numpy(), rcond=None)[0].reshape(-1, 1), dtype=tf.float32)
+
         self.coefs = tf.Variable(np.linalg.lstsq(self.X, self.y,None)[0])
         self.coefs = tfp.glm.fit(self.X,self.y,glm,self.coefs,fast_unsafe_numerics=False)[0].numpy()
-    
+
+
     def fit(self, network, vts, loss = "MSE", reg_order=None, reg_coef=None):
         """
         fit the NGNAR model by minimizing a loss function,
@@ -379,28 +437,32 @@ class NGNAR_TF(NetworkModel):
         self.network = network
         self.vts_end = vts[-self.alpha_order:,:]
         self.y = tf.convert_to_tensor(vts[self.alpha_order:,:].flatten("F").reshape(-1,1))
+        with tf.device('/GPU:0'):
+            self.y = tf.identity(self.y )
         self.X = tf.convert_to_tensor(self.transformVTS(vts))
+        with tf.device('/GPU:0'):
+            self.X = tf.identity(self.X)
         self.coefs = tf.Variable(np.linalg.lstsq(self.X, self.y,None)[0].reshape(-1,1))
-        
+
         self.t = tf.tile(tf.reshape(tf.range(self.alpha_order,len(vts),dtype=tf.float64),(-1,1)),
                          tf.constant([network.size,1]))
         self.coefs_season = tf.Variable(np.array([1.,1.,0.]))#0-scale, 1-time 2-transform
-        
+
         if loss == "MSE":
             loss = self.MSE
         elif loss == "neg_loglik":
             loss = self.neg_loglik
-            
+
         self.coef_penalty=lambda:0
-        
+
         if reg_order is not None:
             self.coef_penalty = lambda : self.reg_coef* tf.norm(self.coefs[:self.coef_order],reg_order)
-            
+
             if reg_coef is None:
                 self.reg_coef = 1
             else:
                 self.reg_coef = reg_coef
-            
+
         #trace_fn = lambda traceable_quantities: {'x': self.coefs}
         trace = tfp.math.minimize(loss, num_steps=10000,
                                   optimizer=tf.optimizers.Adam(),
@@ -409,7 +471,7 @@ class NGNAR_TF(NetworkModel):
         self.y_fitted = self.get_fitted().numpy()
         #self.y_fitted[self.y_fitted==0]+=0.001
         self.vts_fitted = np.reshape(self.link(self.X@self.coefs),(-1,network.size),"F")
-        
+
     def predict(self, length, nodes=None):
         vts_pred = np.zeros((length+self.alpha_order,self.network.size))
         vts_pred[:self.alpha_order,:] = self.vts_end
@@ -440,5 +502,8 @@ def simulate_NGNAR(network, alpha_order, beta_order, intercept, global_intercept
     model = NGNAR_TF(alpha_order,beta_order,intercept,global_intercept,link)
     model.network = network
     for i in range(alpha_order, length+burn_in+alpha_order):
-        vts[i] = np.random.poisson( model.link_np(model.transformVTS(vts[i-alpha_order:i+1,:])@coefs) ).reshape(-1)
+        transformed_vts = model.transformVTS(vts[i - alpha_order:i + 1, :])
+        #print(f"Shape of transformed_vts: {transformed_vts.shape}")
+        #print(f"Shape of coefs: {coefs.shape}")
+        vts[i] = np.random.poisson( model.link_np(transformed_vts @ coefs) ).reshape(-1)
     return vts[burn_in+alpha_order:]
