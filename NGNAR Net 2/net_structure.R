@@ -1,0 +1,7 @@
+library(MASS)
+library(jsonlite)
+load("FMD_MVTS.RData")
+load("Xiangfei.net_2002.RData")
+write.matrix(FMD.MVTS, "FMD.csv")
+write(toJSON(Xiangfei.net_2002[1][[1]]),file="Edges.json")
+write(toJSON(Xiangfei.net_2002[2][[1]]),file="Dists.json")
