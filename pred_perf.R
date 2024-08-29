@@ -648,10 +648,14 @@ p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
 p1+p2+p3+p4+p5
 
 
-####### Regime 4:  GNAR(3,[3,3,3]), alpha = c(0.2, 0.4, -0.6), beta = ((0.3,0.1,0.05),(0.1,0.1,0.05),(-0.1,0.3,0.05))
+############### Model comparison ###################################
+## number of nodes is 90 for large network
+# Regime 4 : GNAR(3, [3,3,3]
 set.seed(16)
 seeds <- sample(1:500,20,replace=FALSE)
-probmat <- matrix(c(.2,.02,.02,.2),nrow = 2)
+#SBM parameters
+#probmat <- matrix(c(.7,.2,.1,.7),nrow = 2) for 0.4 density
+probmat <- matrix(c(.1,.02,.02,.1),nrow = 2)
 rmse_mat <- matrix(ncol = 10, nrow = 20)
 colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
                         "gnarnei_sf","gnar_sf",
@@ -668,169 +672,45 @@ for (i in 1:20){
   set.seed(seeds[i])
   
   # Tree network
-  tr <- make_tree(n = 20, children = 3, mode = 'undirected')
+  tr <- make_tree(n = 90, children = 4, mode = 'undirected') #density 0.02
   net_tr <- igraphtoGNAR(tr) 
   
   #Scale-free network
-  sf <-  barabasi.game(n = 20, m = 4, directed = FALSE)
+  sf <-  barabasi.game(n = 90, m = 2, directed = FALSE) # 0.04419476
   net_sf <- igraphtoGNAR(sf) 
   
   # Sbm network
-  sbm <- sample_sbm(sum(20), pref.matrix = probmat, block.sizes = c(10,10))
+  sbm <- sample_sbm(sum(90), pref.matrix = probmat, block.sizes = c(45,45)) # 0.04868914
   net_sbm <- igraphtoGNAR(sbm)
   
   # Hub network
-  hub <- make_star(20, mode = "undirected")
+  hub <- create_hub_network(num_hubs = 15, nodes_per_hub = 5) # 0.04494382
   net_hub <- igraphtoGNAR(hub)
   
   # Random network
-  er <- erdos.renyi.game(20,p.or.m = 38,type = "gnm",directed = FALSE) 
+  er <- erdos.renyi.game(90,p.or.m = 161,type = "gnm",directed = FALSE)  # 0.04
   net_er <- igraphtoGNAR(er)
   
   # Simulate network data based on the GNAR model
   # Normalize the data
   
-  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams =list(c(0.3,0.1,0.05),c(0.1,0.1,0.05),c(-0.1,0.3,0.05)))
+  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
   #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
   datasim_train_tr <- ts_tr[1:199, ]
   
-  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,0.1,0.05),c(0.1,0.1,0.05),c(-0.1,0.3,0.05)))
+  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
   #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
   datasim_train_sf <- ts_sf[1:199, ]
   
-  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,0.1,0.05),c(0.1,0.1,0.05),c(-0.1,0.3,0.05)))
+  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
   #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
   datasim_train_sbm <- ts_sbm[1:199, ]
   
-  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,0.1,0.05),c(0.1,0.1,0.05),c(-0.1,0.3,0.05)))
+  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
   #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
   datasim_train_hub <- ts_hub[1:199, ]
   
-  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,0.1,0.05),c(0.1,0.1,0.05),c(-0.1,0.3,0.05)))
-  #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_er <- ts_er[1:199, ]
-  
-  for(j in c("tr","sf","sbm", "hub", "er")){
-    datasim_train <- get(paste("datasim_train_",j,sep = ""))
-    tsn <- get(paste("tsn_",j,sep = ""))
-    net <- get(paste("net_",j,sep = ""))
-    
-    # Fit GNAR(3,[2,2,2])
-    fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                alphaOrder = 3, betaOrder = c(3,3,3),
-                                globalalpha = globalalpha))
-    rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-tsn[200,])^2))
-    print(c("seed: ",i," gnar nei done"))
-    
-    # Fit GNAR(3,[0,0,0])
-    simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                      alphaOrder = 3, betaOrder = c(0,0,0),
-                                      globalalpha = globalalpha))
-    rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-tsn[200,])^2))
-    print(c("seed: ",i," gnar nonei done"))
-    
-    # Fit VAR(1)
-    simtrainvar <- t(datasim_train)
-    datasim_train[is.na(datasim_train)] <- 0
-    varforecast <- predict(restrict(VAR(datasim_train,p=3,type = "none")),n.ahead=1)
-    getfcst <- function(x){return(x[1])}
-    varfor <- unlist(lapply(varforecast$fcst, getfcst))
-    rmse_mat[i,paste("var_",j,sep = "")] <- sqrt(mean((varfor-tsn[200,])^2))
-    print(c("seed: ",i," var done"))
-    
-    # Fit simple AR max lag 3
-    simple_ar <- apply(datasim_train, 2, function(x){forecast(auto.arima(x,d=0,D=0,max.p = 3,max.q = 0,max.P = 0,max.Q = 0,stationary = TRUE,seasonal = FALSE,
-                                                                         ic="bic",allowmean = FALSE,allowdrift = FALSE,trace = FALSE),h=1)$mean})
-    rmse_mat[i,paste("ar_",j,sep = "")] <- sqrt(mean((simple_ar-tsn[200,])^2))
-    print(c("seed: ",i," ar done"))
-  }
-}
-
-## PLOTS RESULTS
-# side by side for all models
-rmse_df <- as.data.frame(rmse_mat)
-#colnames(rmse_df) <- rep(c("GNAR(3,[2,2,2])","GNAR(3,[0,0,0])","VAR","AR"),4)
-rmse_melt <- melt(rmse_df)
-#rmse_melt["model"] <- c(rep("GRG",200))#,rep("SBM",200))
-rmse_melt$variable <- as.factor(rmse_melt$variable)
-colnames(rmse_melt) <- c("m","rmse")
-p1 <- ggplot(rmse_melt[1:80, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0,4)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
-p2 <- ggplot(rmse_melt[81:160, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0,4)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p3 <- ggplot(rmse_melt[161:240, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0,4)+ggtitle("SBM")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("") 
-p4 <- ggplot(rmse_melt[241:320, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0,4)+ggtitle("Hub")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p5 <- ggplot(rmse_melt[321:400, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0,4)+ggtitle("Random")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-
-
-p1+p2+p3+p4+p5
-
-
-####### Regime 5:  GNAR(3,[2,0,0]), alpha = c(0.2, 0.4, -0.6), beta = ((0.3,0.4), 0, 0)
-set.seed(16)
-seeds <- sample(1:500,20,replace=FALSE)
-probmat <- matrix(c(.2,.02,.02,.2),nrow = 2)
-rmse_mat <- matrix(ncol = 10, nrow = 20)
-colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
-                        "gnarnei_sf","gnar_sf",
-                        "gnarnei_sbm","gnar_sbm",
-                        "gnarnei_hub","gnar_hub",
-                        "gnarnei_er","gnar_er")
-if (is.null(colnames(rmse_mat))) {
-  stop("Column names of rmse_mat are not set correctly")
-}
-globalalpha <- TRUE
-
-for (i in 1:20){
-  print(i)
-  set.seed(seeds[i])
-  
-  # Tree network
-  tr <- make_tree(n = 20, children = 3, mode = 'undirected')
-  net_tr <- igraphtoGNAR(tr) 
-  
-  #Scale-free network
-  sf <-  barabasi.game(n = 20, m = 4, directed = FALSE)
-  net_sf <- igraphtoGNAR(sf) 
-  
-  # Sbm network
-  sbm <- sample_sbm(sum(20), pref.matrix = probmat, block.sizes = c(10,10))
-  net_sbm <- igraphtoGNAR(sbm)
-  
-  # Hub network
-  hub <- make_star(20, mode = "undirected")
-  net_hub <- igraphtoGNAR(hub)
-  
-  # Random network
-  er <- erdos.renyi.game(20,p.or.m = 38,type = "gnm",directed = FALSE) 
-  net_er <- igraphtoGNAR(er)
-  
-  # Simulate network data based on the GNAR model
-  # Normalize the data
-  
-  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams =list(c(0.3,.4),c(0),c(0)))
-  #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_tr <- ts_tr[1:199, ]
-  
-  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,.4),c(0),c(0)))
-  #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sf <- ts_sf[1:199, ]
-  
-  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,.4),c(0),c(0)))
-  #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sbm <- ts_sbm[1:199, ]
-  
-  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,.4),c(0),c(0)))
-  #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_hub <- ts_hub[1:199, ]
-  
-  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(0.2,20), rep(0.4,20), rep(-0.6,20)), betaParams = list(c(0.3,.4),c(0),c(0)))
+  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
   #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
   datasim_train_er <- ts_er[1:199, ]
   
@@ -841,35 +721,23 @@ for (i in 1:20){
     
     # Fit GNAR(3,[2,2,2])
     fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                alphaOrder = 3, betaOrder = c(2,0,0),
+                                alphaOrder = 3, betaOrder = rep(3,3),
                                 globalalpha = globalalpha))
     rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-ts[200,])^2))
     print(c("seed: ",i," gnar nei done"))
     
     # Fit GNAR(3,[0,0,0])
     simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                      alphaOrder = 3, betaOrder = c(0,0,0),
+                                      alphaOrder = 3, betaOrder = rep(0,3),
                                       globalalpha = globalalpha))
     rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-ts[200,])^2))
     print(c("seed: ",i," gnar nonei done"))
     
-    # Fit VAR(1)
-    #simtrainvar <- t(datasim_train)
-    #datasim_train[is.na(datasim_train)] <- 0
-    #varforecast <- predict(restrict(VAR(datasim_train,p=3,type = "none")),n.ahead=1)
-    #getfcst <- function(x){return(x[1])}
-    #varfor <- unlist(lapply(varforecast$fcst, getfcst))
-    #rmse_mat[i,paste("var_",j,sep = "")] <- sqrt(mean((varfor-tsn[200,])^2))
-    #print(c("seed: ",i," var done"))
     
-    # Fit simple AR max lag 3
-    #simple_ar <- apply(datasim_train, 2, function(x){forecast(auto.arima(x,d=0,D=0,max.p = 3,max.q = 0,max.P = 0,max.Q = 0,stationary = TRUE,seasonal = FALSE,
-     #                                                                    ic="bic",allowmean = FALSE,allowdrift = FALSE,trace = FALSE),h=1)$mean})
-    #rmse_mat[i,paste("ar_",j,sep = "")] <- sqrt(mean((simple_ar-tsn[200,])^2))
-    #print(c("seed: ",i," ar done"))
   }
 }
 
+library(patchwork)
 ## PLOTS RESULTS
 # side by side for all models
 rmse_df <- as.data.frame(rmse_mat)
@@ -879,21 +747,244 @@ rmse_melt <- melt(rmse_df)
 rmse_melt$variable <- as.factor(rmse_melt$variable)
 colnames(rmse_melt) <- c("m","rmse")
 p1 <- ggplot(rmse_melt[1:40, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.5,3)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
+  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
 p2 <- ggplot(rmse_melt[41:80, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.5,3)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
+  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
 p3 <- ggplot(rmse_melt[81:120, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.5,3)+ggtitle("SBM")+
+  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("SBM")+
   theme(plot.title = element_text(hjust = 0.5))+ylab("") 
 p4 <- ggplot(rmse_melt[121:160, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.5,3)+ggtitle("Hub")+
+  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Hub")+
   theme(plot.title = element_text(hjust = 0.5))+ylab("")
 p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.5,3)+ggtitle("Random")+
+  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Random")+
   theme(plot.title = element_text(hjust = 0.5))+ylab("")
 
 
 p1+p2+p3+p4+p5
+
+
+######### Regime 5: GNAR(4, [1,1,1,1])
+
+probmat <- matrix(c(.1,.02,.02,.1),nrow = 2)
+rmse_mat <- matrix(ncol = 10, nrow = 20)
+colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
+                        "gnarnei_sf","gnar_sf",
+                        "gnarnei_sbm","gnar_sbm",
+                        "gnarnei_hub","gnar_hub",
+                        "gnarnei_er","gnar_er")
+if (is.null(colnames(rmse_mat))) {
+  stop("Column names of rmse_mat are not set correctly")
+}
+globalalpha <- TRUE
+
+for (i in 1:20){
+  print(i)
+  set.seed(seeds[i])
+  
+  # Tree network
+  tr <- make_tree(n = 90, children = 4, mode = 'undirected') #density 0.02
+  net_tr <- igraphtoGNAR(tr) 
+  
+  #Scale-free network
+  sf <-  barabasi.game(n = 90, m = 2, directed = FALSE) # 0.04419476
+  net_sf <- igraphtoGNAR(sf) 
+  
+  # Sbm network
+  sbm <- sample_sbm(sum(90), pref.matrix = probmat, block.sizes = c(45,45)) # 0.04868914
+  net_sbm <- igraphtoGNAR(sbm)
+  
+  # Hub network
+  hub <- create_hub_network(num_hubs = 15, nodes_per_hub = 5) # 0.04494382
+  net_hub <- igraphtoGNAR(hub)
+  
+  # Random network
+  er <- erdos.renyi.game(90,p.or.m = 161,type = "gnm",directed = FALSE)  # 0.04
+  net_er <- igraphtoGNAR(er)
+  
+  # Simulate network data based on the GNAR model
+  # Normalize the data
+  
+  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
+  #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_tr <- ts_tr[1:199, ]
+  
+  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
+  #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_sf <- ts_sf[1:199, ]
+  
+  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
+  #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_sbm <- ts_sbm[1:199, ]
+  
+  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
+  #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_hub <- ts_hub[1:199, ]
+  
+  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
+  #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_er <- ts_er[1:199, ]
+  
+  for(j in c("tr","sf","sbm", "hub", "er")){
+    datasim_train <- get(paste("datasim_train_",j,sep = ""))
+    ts <- get(paste("ts_",j,sep = ""))
+    net <- get(paste("net_",j,sep = ""))
+    
+    # Fit GNAR(3,[2,2,2])
+    fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
+                                alphaOrder = 4, betaOrder = rep(1,4),
+                                globalalpha = globalalpha))
+    rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-ts[200,])^2))
+    print(c("seed: ",i," gnar nei done"))
+    
+    # Fit GNAR(3,[0,0,0])
+    simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
+                                      alphaOrder = 4, betaOrder = rep(0,4),
+                                      globalalpha = globalalpha))
+    rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-ts[200,])^2))
+    print(c("seed: ",i," gnar nonei done"))
+    
+    
+  }
+}
+
+library(patchwork)
+## PLOTS RESULTS
+# side by side for all models
+rmse_df <- as.data.frame(rmse_mat)
+#colnames(rmse_df) <- rep(c("GNAR(3,[2,2,2])","GNAR(3,[0,0,0])","VAR","AR"),4)
+rmse_melt <- melt(rmse_df)
+#rmse_melt["model"] <- c(rep("GRG",200))#,rep("SBM",200))
+rmse_melt$variable <- as.factor(rmse_melt$variable)
+colnames(rmse_melt) <- c("m","rmse")
+p1 <- ggplot(rmse_melt[1:40, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
+p2 <- ggplot(rmse_melt[41:80, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
+p3 <- ggplot(rmse_melt[81:120, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("SBM")+
+  theme(plot.title = element_text(hjust = 0.5))+ylab("") 
+p4 <- ggplot(rmse_melt[121:160, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Hub")+
+  theme(plot.title = element_text(hjust = 0.5))+ylab("")
+p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Random")+
+  theme(plot.title = element_text(hjust = 0.5))+ylab("")
+
+dev.off()
+p1+p2+p3+p4+p5
+
+########## regime 6 : GNAR(4,[2,2,2,2])
+
+probmat <- matrix(c(.1,.02,.02,.1),nrow = 2)
+rmse_mat <- matrix(ncol = 10, nrow = 20)
+colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
+                        "gnarnei_sf","gnar_sf",
+                        "gnarnei_sbm","gnar_sbm",
+                        "gnarnei_hub","gnar_hub",
+                        "gnarnei_er","gnar_er")
+if (is.null(colnames(rmse_mat))) {
+  stop("Column names of rmse_mat are not set correctly")
+}
+globalalpha <- TRUE
+
+for (i in 1:20){
+  print(i)
+  set.seed(seeds[i])
+  
+  # Tree network
+  tr <- make_tree(n = 90, children = 4, mode = 'undirected') #density 0.02
+  net_tr <- igraphtoGNAR(tr) 
+  
+  #Scale-free network
+  sf <-  barabasi.game(n = 90, m = 2, directed = FALSE) # 0.04419476
+  net_sf <- igraphtoGNAR(sf) 
+  
+  # Sbm network
+  sbm <- sample_sbm(sum(90), pref.matrix = probmat, block.sizes = c(45,45)) # 0.04868914
+  net_sbm <- igraphtoGNAR(sbm)
+  
+  # Hub network
+  hub <- create_hub_network(num_hubs = 15, nodes_per_hub = 5) # 0.04494382
+  net_hub <- igraphtoGNAR(hub)
+  
+  # Random network
+  er <- erdos.renyi.game(90,p.or.m = 161,type = "gnm",directed = FALSE)  # 0.04
+  net_er <- igraphtoGNAR(er)
+  
+  # Simulate network data based on the GNAR model
+  # Normalize the data
+  
+  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
+  #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_tr <- ts_tr[1:199, ]
+  
+  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
+  #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_sf <- ts_sf[1:199, ]
+  
+  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
+  #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_sbm <- ts_sbm[1:199, ]
+  
+  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
+  #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_hub <- ts_hub[1:199, ]
+  
+  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
+  #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
+  datasim_train_er <- ts_er[1:199, ]
+  
+  for(j in c("tr","sf","sbm", "hub", "er")){
+    datasim_train <- get(paste("datasim_train_",j,sep = ""))
+    ts <- get(paste("ts_",j,sep = ""))
+    net <- get(paste("net_",j,sep = ""))
+    
+    # Fit GNAR(3,[2,2,2])
+    fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
+                                alphaOrder = 4, betaOrder = rep(2,4),
+                                globalalpha = globalalpha))
+    rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-ts[200,])^2))
+    print(c("seed: ",i," gnar nei done"))
+    
+    # Fit GNAR(3,[0,0,0])
+    simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
+                                      alphaOrder = 4, betaOrder = rep(0,4),
+                                      globalalpha = globalalpha))
+    rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-ts[200,])^2))
+    print(c("seed: ",i," gnar nonei done"))
+    
+    
+  }
+}
+
+library(patchwork)
+## PLOTS RESULTS
+# side by side for all models
+rmse_df <- as.data.frame(rmse_mat)
+#colnames(rmse_df) <- rep(c("GNAR(3,[2,2,2])","GNAR(3,[0,0,0])","VAR","AR"),4)
+rmse_melt <- melt(rmse_df)
+#rmse_melt["model"] <- c(rep("GRG",200))#,rep("SBM",200))
+rmse_melt$variable <- as.factor(rmse_melt$variable)
+colnames(rmse_melt) <- c("m","rmse")
+p1 <- ggplot(rmse_melt[1:40, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,12)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
+p2 <- ggplot(rmse_melt[41:80, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
+p3 <- ggplot(rmse_melt[81:120, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("SBM")+
+  theme(plot.title = element_text(hjust = 0.5))+ylab("") 
+p4 <- ggplot(rmse_melt[121:160, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("Hub")+
+  theme(plot.title = element_text(hjust = 0.5))+ylab("")
+p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
+  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("Random")+
+  theme(plot.title = element_text(hjust = 0.5))+ylab("")
+
+
+p1+p2+p3+p4+p5
+
+
 
 
 
@@ -3339,342 +3430,5 @@ create_hub_network <- function(num_hubs, nodes_per_hub) {
   
   return(g)
 }
-
-
-############### Model comparison ###################################
-## number of nodes is 90 for large network
-# Regime 6 : GNAR(3, [3,3,3]
-set.seed(16)
-seeds <- sample(1:500,20,replace=FALSE)
-#SBM parameters
-#probmat <- matrix(c(.7,.2,.1,.7),nrow = 2) for 0.4 density
-probmat <- matrix(c(.1,.02,.02,.1),nrow = 2)
-rmse_mat <- matrix(ncol = 10, nrow = 20)
-colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
-                        "gnarnei_sf","gnar_sf",
-                        "gnarnei_sbm","gnar_sbm",
-                        "gnarnei_hub","gnar_hub",
-                        "gnarnei_er","gnar_er")
-if (is.null(colnames(rmse_mat))) {
-  stop("Column names of rmse_mat are not set correctly")
-}
-globalalpha <- TRUE
-
-for (i in 1:20){
-  print(i)
-  set.seed(seeds[i])
-  
-  # Tree network
-  tr <- make_tree(n = 90, children = 4, mode = 'undirected') #density 0.02
-  net_tr <- igraphtoGNAR(tr) 
-  
-  #Scale-free network
-  sf <-  barabasi.game(n = 90, m = 2, directed = FALSE) # 0.04419476
-  net_sf <- igraphtoGNAR(sf) 
-  
-  # Sbm network
-  sbm <- sample_sbm(sum(90), pref.matrix = probmat, block.sizes = c(45,45)) # 0.04868914
-  net_sbm <- igraphtoGNAR(sbm)
-  
-  # Hub network
-  hub <- create_hub_network(num_hubs = 15, nodes_per_hub = 5) # 0.04494382
-  net_hub <- igraphtoGNAR(hub)
-  
-  # Random network
-  er <- erdos.renyi.game(90,p.or.m = 161,type = "gnm",directed = FALSE)  # 0.04
-  net_er <- igraphtoGNAR(er)
-  
-  # Simulate network data based on the GNAR model
-  # Normalize the data
-  
-  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
-  #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_tr <- ts_tr[1:199, ]
-  
-  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
-  #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sf <- ts_sf[1:199, ]
-  
-  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
-  #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sbm <- ts_sbm[1:199, ]
-  
-  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
-  #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_hub <- ts_hub[1:199, ]
-  
-  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(0.2,90), rep(0.4,90), rep(-0.6,90)), betaParams = list(c(0.3,.1, 0.05),c(0.1,.1, 0.05),c(-0.2,.3, 0.05)))
-  #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_er <- ts_er[1:199, ]
-  
-  for(j in c("tr","sf","sbm", "hub", "er")){
-    datasim_train <- get(paste("datasim_train_",j,sep = ""))
-    ts <- get(paste("ts_",j,sep = ""))
-    net <- get(paste("net_",j,sep = ""))
-    
-    # Fit GNAR(3,[2,2,2])
-    fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                alphaOrder = 3, betaOrder = rep(3,3),
-                                globalalpha = globalalpha))
-    rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-ts[200,])^2))
-    print(c("seed: ",i," gnar nei done"))
-    
-    # Fit GNAR(3,[0,0,0])
-    simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                      alphaOrder = 3, betaOrder = rep(0,3),
-                                      globalalpha = globalalpha))
-    rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-ts[200,])^2))
-    print(c("seed: ",i," gnar nonei done"))
-    
-    
-  }
-}
-
-library(patchwork)
-## PLOTS RESULTS
-# side by side for all models
-rmse_df <- as.data.frame(rmse_mat)
-#colnames(rmse_df) <- rep(c("GNAR(3,[2,2,2])","GNAR(3,[0,0,0])","VAR","AR"),4)
-rmse_melt <- melt(rmse_df)
-#rmse_melt["model"] <- c(rep("GRG",200))#,rep("SBM",200))
-rmse_melt$variable <- as.factor(rmse_melt$variable)
-colnames(rmse_melt) <- c("m","rmse")
-p1 <- ggplot(rmse_melt[1:40, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
-p2 <- ggplot(rmse_melt[41:80, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p3 <- ggplot(rmse_melt[81:120, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("SBM")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("") 
-p4 <- ggplot(rmse_melt[121:160, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Hub")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.8,1.25)+ggtitle("Random")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-
-
-p1+p2+p3+p4+p5
-
-
-######### Regime 7: GNAR(4, [1,1,1,1])
-
-probmat <- matrix(c(.1,.02,.02,.1),nrow = 2)
-rmse_mat <- matrix(ncol = 10, nrow = 20)
-colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
-                        "gnarnei_sf","gnar_sf",
-                        "gnarnei_sbm","gnar_sbm",
-                        "gnarnei_hub","gnar_hub",
-                        "gnarnei_er","gnar_er")
-if (is.null(colnames(rmse_mat))) {
-  stop("Column names of rmse_mat are not set correctly")
-}
-globalalpha <- TRUE
-
-for (i in 1:20){
-  print(i)
-  set.seed(seeds[i])
-  
-  # Tree network
-  tr <- make_tree(n = 90, children = 4, mode = 'undirected') #density 0.02
-  net_tr <- igraphtoGNAR(tr) 
-  
-  #Scale-free network
-  sf <-  barabasi.game(n = 90, m = 2, directed = FALSE) # 0.04419476
-  net_sf <- igraphtoGNAR(sf) 
-  
-  # Sbm network
-  sbm <- sample_sbm(sum(90), pref.matrix = probmat, block.sizes = c(45,45)) # 0.04868914
-  net_sbm <- igraphtoGNAR(sbm)
-  
-  # Hub network
-  hub <- create_hub_network(num_hubs = 15, nodes_per_hub = 5) # 0.04494382
-  net_hub <- igraphtoGNAR(hub)
-  
-  # Random network
-  er <- erdos.renyi.game(90,p.or.m = 161,type = "gnm",directed = FALSE)  # 0.04
-  net_er <- igraphtoGNAR(er)
-  
-  # Simulate network data based on the GNAR model
-  # Normalize the data
-  
-  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
-  #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_tr <- ts_tr[1:199, ]
-  
-  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
-  #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sf <- ts_sf[1:199, ]
-  
-  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
-  #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sbm <- ts_sbm[1:199, ]
-  
-  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
-  #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_hub <- ts_hub[1:199, ]
-  
-  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.1),c(0.1),c(0.3),c(0.05)))
-  #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_er <- ts_er[1:199, ]
-  
-  for(j in c("tr","sf","sbm", "hub", "er")){
-    datasim_train <- get(paste("datasim_train_",j,sep = ""))
-    ts <- get(paste("ts_",j,sep = ""))
-    net <- get(paste("net_",j,sep = ""))
-    
-    # Fit GNAR(3,[2,2,2])
-    fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                alphaOrder = 4, betaOrder = rep(1,4),
-                                globalalpha = globalalpha))
-    rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-ts[200,])^2))
-    print(c("seed: ",i," gnar nei done"))
-    
-    # Fit GNAR(3,[0,0,0])
-    simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                      alphaOrder = 4, betaOrder = rep(0,4),
-                                      globalalpha = globalalpha))
-    rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-ts[200,])^2))
-    print(c("seed: ",i," gnar nonei done"))
-    
-    
-  }
-}
-
-library(patchwork)
-## PLOTS RESULTS
-# side by side for all models
-rmse_df <- as.data.frame(rmse_mat)
-#colnames(rmse_df) <- rep(c("GNAR(3,[2,2,2])","GNAR(3,[0,0,0])","VAR","AR"),4)
-rmse_melt <- melt(rmse_df)
-#rmse_melt["model"] <- c(rep("GRG",200))#,rep("SBM",200))
-rmse_melt$variable <- as.factor(rmse_melt$variable)
-colnames(rmse_melt) <- c("m","rmse")
-p1 <- ggplot(rmse_melt[1:40, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
-p2 <- ggplot(rmse_melt[41:80, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p3 <- ggplot(rmse_melt[81:120, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("SBM")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("") 
-p4 <- ggplot(rmse_melt[121:160, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Hub")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.85,1.25)+ggtitle("Random")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-
-dev.off()
-p1+p2+p3+p4+p5
-
-########## regime 8:GNAR(4,[2,2,2,2])
-
-probmat <- matrix(c(.1,.02,.02,.1),nrow = 2)
-rmse_mat <- matrix(ncol = 10, nrow = 20)
-colnames(rmse_mat) <- c("gnarnei_tr","gnar_tr",
-                        "gnarnei_sf","gnar_sf",
-                        "gnarnei_sbm","gnar_sbm",
-                        "gnarnei_hub","gnar_hub",
-                        "gnarnei_er","gnar_er")
-if (is.null(colnames(rmse_mat))) {
-  stop("Column names of rmse_mat are not set correctly")
-}
-globalalpha <- TRUE
-
-for (i in 1:20){
-  print(i)
-  set.seed(seeds[i])
-  
-  # Tree network
-  tr <- make_tree(n = 90, children = 4, mode = 'undirected') #density 0.02
-  net_tr <- igraphtoGNAR(tr) 
-  
-  #Scale-free network
-  sf <-  barabasi.game(n = 90, m = 2, directed = FALSE) # 0.04419476
-  net_sf <- igraphtoGNAR(sf) 
-  
-  # Sbm network
-  sbm <- sample_sbm(sum(90), pref.matrix = probmat, block.sizes = c(45,45)) # 0.04868914
-  net_sbm <- igraphtoGNAR(sbm)
-  
-  # Hub network
-  hub <- create_hub_network(num_hubs = 15, nodes_per_hub = 5) # 0.04494382
-  net_hub <- igraphtoGNAR(hub)
-  
-  # Random network
-  er <- erdos.renyi.game(90,p.or.m = 161,type = "gnm",directed = FALSE)  # 0.04
-  net_er <- igraphtoGNAR(er)
-  
-  # Simulate network data based on the GNAR model
-  # Normalize the data
-  
-  ts_tr <- GNARsim(n = 200, net=net_tr, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
-  #tsn_tr <- apply(ts_tr, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_tr <- ts_tr[1:199, ]
-  
-  ts_sf <- GNARsim(n = 200, net = net_sf, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
-  #tsn_sf <- apply(ts_sf, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sf <- ts_sf[1:199, ]
-  
-  ts_sbm <- GNARsim(n = 200, net = net_sbm, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
-  #tsn_sbm <- apply(ts_sbm, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_sbm <- ts_sbm[1:199, ]
-  
-  ts_hub <- GNARsim(n = 200, net = net_hub, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
-  #tsn_hub <- apply(ts_hub, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_hub <- ts_hub[1:199, ]
-  
-  ts_er <- GNARsim(n = 200, net = net_er, alphaParams = list(rep(-0.6,90), rep(-0.4,90), rep(-0.2,90), rep(-0.1,90)), betaParams = list(c(0.4,0.4),c(0.3,-0.4),c(0.5, -0.3),c(0.05,-0.1)))
-  #tsn_er <- apply(ts_er, 2, function(x) { x / sd(x[1:199], na.rm = TRUE) })
-  datasim_train_er <- ts_er[1:199, ]
-  
-  for(j in c("tr","sf","sbm", "hub", "er")){
-    datasim_train <- get(paste("datasim_train_",j,sep = ""))
-    ts <- get(paste("ts_",j,sep = ""))
-    net <- get(paste("net_",j,sep = ""))
-    
-    # Fit GNAR(3,[2,2,2])
-    fit_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                alphaOrder = 4, betaOrder = rep(2,4),
-                                globalalpha = globalalpha))
-    rmse_mat[i,paste("gnarnei_",j,sep = "")] <- sqrt(mean((fit_pred-ts[200,])^2))
-    print(c("seed: ",i," gnar nei done"))
-    
-    # Fit GNAR(3,[0,0,0])
-    simplevar_pred <- predict(GNARfit(vts = datasim_train, net = net,
-                                      alphaOrder = 4, betaOrder = rep(0,4),
-                                      globalalpha = globalalpha))
-    rmse_mat[i,paste("gnar_",j,sep = "")] <- sqrt(mean((simplevar_pred-ts[200,])^2))
-    print(c("seed: ",i," gnar nonei done"))
-    
-    
-  }
-}
-
-library(patchwork)
-## PLOTS RESULTS
-# side by side for all models
-rmse_df <- as.data.frame(rmse_mat)
-#colnames(rmse_df) <- rep(c("GNAR(3,[2,2,2])","GNAR(3,[0,0,0])","VAR","AR"),4)
-rmse_melt <- melt(rmse_df)
-#rmse_melt["model"] <- c(rep("GRG",200))#,rep("SBM",200))
-rmse_melt$variable <- as.factor(rmse_melt$variable)
-colnames(rmse_melt) <- c("m","rmse")
-p1 <- ggplot(rmse_melt[1:40, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="red")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,12)+ggtitle("Tree")+theme(plot.title = element_text(hjust = 0.5))
-p2 <- ggplot(rmse_melt[41:80, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="yellowgreen")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("Scale-free")+theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p3 <- ggplot(rmse_melt[81:120, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="cornflowerblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("SBM")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("") 
-p4 <- ggplot(rmse_melt[121:160, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="pink")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("Hub")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-p5 <- ggplot(rmse_melt[161:200, ], aes(x=m, y=rmse)) +
-  geom_boxplot(fill="purple")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab(" ")+ylim(0.75,1.25)+ggtitle("Random")+
-  theme(plot.title = element_text(hjust = 0.5))+ylab("")
-
-
-p1+p2+p3+p4+p5
 
 
