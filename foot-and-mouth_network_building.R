@@ -37,7 +37,6 @@ points(locations$Longitude, locations$Latitude, col = "red", pch = 16, cex = 0.6
 legend("topright", legend = c("2001 Farm Location", "1967 Farm Location"), col = c("red", "blue"), pch = 16, cex = 1, pt.cex = 0.7, text.width = 1)
 
 # Calculate the distance matrix
-####### Way 1
 distance_matrix <- geodist(new_locations, measure = 'haversine' )/1000 #converting it to km
 
 # Create edges for any two farms less than 30 km apart
@@ -72,6 +71,17 @@ save(net_1967, file = "net_1967.RData")
 
 
 net_1967 <- graph.adjacency(adj_matrix, mode = "undirected")
+############ Degree distribution
+degree1967<- degree(net_1967)
+t2 <- table (degree1967)
+sum(t2)
+
+relafreq_2 <- t2/sum(t2)
+barplot(relafreq_2, xlab = "k", ylab = "Relative frequencies", 
+        main = "Histogram of 1967 network's nodes degrees",
+        col = "orange")
+
+
 net_1967 <- igraphtoGNAR(net_1967)
 
 library(maps)
@@ -203,6 +213,19 @@ Xiangfei.net_2002 <- matrixtoGNAR(adj_matrix1)
 save(Xiangfei.net_2002, file= "Xiangfei.net_2002.RData")
 
 Xiangfei.net_2002 <- graph.adjacency(adj_matrix1, mode = "undirected", weighted = TRUE)
+
+########### Degree Distribution
+degree2001<- degree(xiangfei_net_2002)
+t1 <- table (degree2001)
+sum(t1)
+
+relafreq_1 <- t1/sum(t1)
+barplot(relafreq_1, xlab = "k", ylab = "Relative frequencies", 
+        main = "Histogram of 2001 network's nodes degrees",
+        col = "orange")
+
+
+
 Xiangfei.net_2002 <- igraphtoGNAR(Xiangfei.net_2002)
 is.GNARnet(Xiangfei.net_2002)
 Xiangfei.map(net = Xiangfei.net_2002, loc.coords = Xiangfei.coords_2002)
